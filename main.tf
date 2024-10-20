@@ -64,8 +64,6 @@ resource "aws_instance" "elk_server" {
               sudo yum install docker -y >> /var/log/user_data.log 2>&1
               sudo service docker start >> /var/log/user_data.log 2>&1
               mkdir -p /root/logstash
-              if [ ! -f /root/logstash/logstash.conf ]; then
-                 echo "Creating default logstash.conf"
                  cat << 'EOT' > /root/logstash/logstash.conf
                  input {
                    beats {
@@ -84,7 +82,7 @@ resource "aws_instance" "elk_server" {
                    }
                  }
                  EOT
-                 fi
+                 
               sudo usermod -aG docker ec2-user
               sudo curl -L "https://github.com/docker/compose/releases/download/1.29.2/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose >> /var/log/user_data.log 2>&1
               sudo chmod +x /usr/local/bin/docker-compose >> /var/log/user_data.log 2>&1
