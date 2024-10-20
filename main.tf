@@ -1,8 +1,8 @@
 provider "aws" {
-  region = "ap-south-1"  # Change to your preferred region
+  region = "ap-south-1"
 }
 
-# Create a security group to allow SSH and HTTP access
+# Security Group
 resource "aws_security_group" "ELK_sg" {
   name_prefix = "ELK-sg-"
 
@@ -49,9 +49,9 @@ resource "aws_security_group" "ELK_sg" {
   }
 }
 
-# Create an EC2 instance for the ELK stack
+# EC2 Instance for ELK Stack
 resource "aws_instance" "elk_server" {
-  ami           = "ami-078264b8ba71bc45e"  # Use the latest Amazon Linux AMI or Ubuntu
+  ami           = "ami-078264b8ba71bc45e"
   instance_type = "t2.large"
   key_name      = var.key_name
   vpc_security_group_ids = [aws_security_group.ELK_sg.id]
@@ -60,35 +60,35 @@ resource "aws_instance" "elk_server" {
               #!/bin/bash
               # Update and install dependencies
               sudo yum update -y >> /var/log/user_data.log 2>&1
-              sudo yum install libxcrypt-compat -y  >> /var/log/user_data.log 2>&1
+              sudo yum install libxcrypt-compat -y >> /var/log/user_data.log 2>&1
               sudo yum install docker -y >> /var/log/user_data.log 2>&1
               sudo service docker start >> /var/log/user_data.log 2>&1
               mkdir -p /root/logstash
-                 cat << 'EOT' > /root/logstash/logstash.conf
-                 input {
-                   beats {
-                     port => 5044
-                   }
-                 }
+              
+              # Write the logstash configuration
+              cat <<EOT > /root/logstash/logstash.conf
+              input {
+                beats {
+                  port => 5044
+                }
+              }
+              filter {
+                # Add filters here
+              }
+              output {
+                elasticsearch {
+                  hosts => ["http://elasticsearch:9200"]
+                  index => "logstash-%%{+YYYY.MM.dd}"
+                }
+              }
+              EOT
 
-                 filter {
-                   # Add filters here
-                 }
-
-                 output {
-                   elasticsearch {
-                     hosts => ["http://elasticsearch:9200"]
-                     index => "logstash-%%{+YYYY.MM.dd}"
-                   }
-                 }
-                 EOT
-                 
               sudo usermod -aG docker ec2-user
               sudo curl -L "https://github.com/docker/compose/releases/download/1.29.2/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose >> /var/log/user_data.log 2>&1
               sudo chmod +x /usr/local/bin/docker-compose >> /var/log/user_data.log 2>&1
 
               # Create docker-compose file for ELK
-              cat << 'EOT' > docker-compose.yml
+              cat <<EOT > docker-compose.yml
               version: '3'
               services:
                 elasticsearch:
@@ -109,6 +109,7 @@ resource "aws_instance" "elk_server" {
                     - "5044:5044"
                   networks:
                     - elk
+
                 kibana:
                   image: docker.elastic.co/kibana/kibana:8.15.2
                   environment:
