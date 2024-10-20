@@ -56,99 +56,70 @@ resource "aws_instance" "elk_server" {
   key_name      = var.key_name
   vpc_security_group_ids = [aws_security_group.ELK_sg.id]
 
-  # User data script for provisioning the instance
   user_data = <<-EOF
-    #!/bin/bash
-    # Update and install dependencies
-    sudo yum update -y
-    sudo yum install libxcrypt-compat -y
-    sudo yum install docker -y
-    sudo service docker start
-    mkdir -p /root/logstash
+              #!/bin/bash
+              # Update and install dependencies
+              sudo yum update -y >> /var/log/user_data.log 2>&1
+              sudo yum install libxcrypt-compat -y  >> /var/log/user_data.log 2>&1
+              sudo yum install docker -y >> /var/log/user_data.log 2>&1
+              sudo service docker start >> /var/log/user_data.log 2>&1
+              mkdir -p /root/logstash
+              touch /root/logstash/logstash.conf
+              if [ ! -f /root/logstash/logstash.conf ]; then
+                 echo "Creating default logstash.conf"
+                 cat <<EOT >> /root/logstash/logstash.conf
+              input {
+                beats {
+                  port => 5044
+                }
+              }
 
-    # Create default logstash.conf
-    cat <<EOT > /root/logstash/logstash.conf
-    input {
-      beats {
-        port => 5044
-      }
-    }
+              filter {
+                # Add filters here
+              }
 
-    filter {
-      # Add filters here
-    }
+              output {
+                elasticsearch {
+                  hosts => ["http://elasticsearch:9200"]
+                  index => "logstash-%%{+YYYY.MM.dd}"
+                }
+              }
+              EOT
+              fi
+              sudo usermod -aG docker ec2-user
+              sudo curl -L "https://github.com/docker/compose/releases/download/1.29.2/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose >> /var/log/user_data.log 2>&1
+              sudo chmod +x /usr/local/bin/docker-compose >> /var/log/user_data.log 2>&1
 
-    output {
-      elasticsearch {
-        hosts => ["http://elasticsearch:9200"]
-        index => "logstash-%%{+YYYY.MM.dd}"
-      }
-    }
-    EOT
+              # Create docker-compose file for ELK
+              cat <<EOT >> docker-compose.yml
+              version: '3'
+              services:
+                elasticsearch:
+                  image: docker.elastic.co/elasticsearch/elasticsearch:8.15.2
+                  environment:
+                    - discovery.type=single-node
+                    - xpack.security.enabled=false
+                  ports:
+                    - "9200:9200"
 
-    sudo usermod -aG docker ec2-user
-    sudo curl -L "https://github.com/docker/compose/releases/download/1.29.2/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
-    sudo chmod +x /usr/local/bin/docker-compose
+                logstash:
+                  image: docker.elastic.co/logstash/logstash:8.15.2
+                  volumes:
+                    - /root/logstash/logstash.conf:/usr/share/logstash/pipeline/logstash.conf
+                  ports:
+                    - "5044:5044"
 
-    # Create docker-compose.yml file for ELK
-    cat <<EOT > docker-compose.yml
-    version: "3"
-    services:
-      elasticsearch:
-        image: docker.elastic.co/elasticsearch/elasticsearch:8.15.2
-        environment:
-          - discovery.type=single-node
-          - ELASTIC_PASSWORD=elastic123
-          - xpack.security.enabled=true
-          - xpack.security.http.ssl.enabled=true
-          - xpack.security.http.ssl.key=/usr/share/elasticsearch/config/certs/http-es-node-1.key
-          - xpack.security.http.ssl.certificate=/usr/share/elasticsearch/config/certs/http-es-node-1.crt
-          - xpack.security.http.ssl.certificate_authorities=/usr/share/elasticsearch/config/certs/ca.crt
-          - network.host=0.0.0.0
-        volumes:
-          - /path/to/your/certs:/usr/share/elasticsearch/config/certs
-        ports:
-          - "9200:9200"
-        hostname: elasticsearch-node
-        networks:
-          elk:
-            ipv4_address: 172.18.0.2
+                kibana:
+                  image: docker.elastic.co/kibana/kibana:8.15.2
+                  environment:
+                    - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+                  ports:
+                    - "5601:5601"
+              EOT
 
-      logstash:
-        image: docker.elastic.co/logstash/logstash:8.15.2
-        volumes:
-          - /root/logstash/logstash.conf:/usr/share/logstash/pipeline/logstash.conf
-        ports:
-          - "5044:5044"
-        networks:
-          elk:
-            ipv4_address: 172.18.0.3
-
-      kibana:
-        image: docker.elastic.co/kibana/kibana:8.15.2
-        environment:
-          - ELASTICSEARCH_HOSTS=https://elasticsearch:9200
-          - ELASTICSEARCH_USERNAME=elastic
-          - ELASTICSEARCH_PASSWORD=elastic123
-          - SERVER_HOST=0.0.0.0
-          - SERVER_NAME=kibana-node
-        ports:
-          - "5601:5601"
-        networks:
-          elk:
-            ipv4_address: 172.18.0.4
-
-    networks:
-      elk:
-        driver: bridge
-        ipam:
-          config:
-            - subnet: 172.18.0.0/16
-    EOT
-
-    # Start the ELK stack
-    sudo docker-compose up -d
-  EOF
+              # Start ELK stack
+              sudo docker-compose up -d >> /var/log/user_data.log 2>&1
+              EOF
 
   tags = {
     Name = "ELK-Stack-Server"
