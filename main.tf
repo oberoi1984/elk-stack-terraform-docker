@@ -101,6 +101,8 @@ resource "aws_instance" "elk_server" {
                     - xpack.security.enabled=false
                   ports:
                     - "9200:9200"
+                  networks:
+                    - elk
 
                 logstash:
                   image: docker.elastic.co/logstash/logstash:8.15.2
@@ -108,13 +110,19 @@ resource "aws_instance" "elk_server" {
                     - /root/logstash/logstash.conf:/usr/share/logstash/pipeline/logstash.conf
                   ports:
                     - "5044:5044"
-
+                  networks:
+                    - elk
                 kibana:
                   image: docker.elastic.co/kibana/kibana:8.15.2
                   environment:
                     - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
                   ports:
                     - "5601:5601"
+                  networks:
+                    - elk
+              networks:
+                elk:
+                  driver: bridge
               EOT
 
               # Start ELK stack
