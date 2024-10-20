@@ -1,12 +1,6 @@
 provider "aws" {
   region = "ap-south-1"  # Change to your preferred region
 }
-
-resource "aws_instance" "elk_server" {
-  ami           = "ami-078264b8ba71bc45e"  # Use the latest Amazon Linux AMI or Ubuntu
-  instance_type = "t2.micro"
-  key_name      = var.key_name
-}
 # Create a security group to allow SSH and HTTP access
 resource "aws_security_group" "ELK_sg" {
   name_prefix = "ELK-sg-"
@@ -31,6 +25,12 @@ resource "aws_security_group" "ELK_sg" {
     protocol    = "-1"
     cidr_blocks = ["0.0.0.0/0"]
   }
+resource "aws_instance" "elk_server" {
+  ami           = "ami-078264b8ba71bc45e"  # Use the latest Amazon Linux AMI or Ubuntu
+  instance_type = "t2.micro"
+  key_name      = var.key_name
+
+
   
   user_data = <<-EOF
               #!/bin/bash
