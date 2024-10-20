@@ -1,96 +1,37 @@
-provider "aws" {
-  region = "ap-south-1"  # Change to your preferred region
-}
+#!/bin/bash
+# Update and install dependencies
+sudo yum update -y >> /var/log/user_data.log 2>&1
+sudo yum install libxcrypt-compat -y  >> /var/log/user_data.log 2>&1
+sudo yum install docker -y >> /var/log/user_data.log 2>&1
+sudo service docker start >> /var/log/user_data.log 2>&1
+mkdir -p /root/logstash
 
-# Create a security group to allow SSH and HTTP access
-resource "aws_security_group" "ELK_sg" {
-  name_prefix = "ELK-sg-"
-
-  ingress {
-    from_port   = 22
-    to_port     = 22
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-  ingress {
-    from_port   = 5601
-    to_port     = 5601
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-  ingress {
-    from_port   = 9200
-    to_port     = 9200
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-  ingress {
-    from_port   = 5044
-    to_port     = 5044
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-  ingress {
-    from_port   = 80
-    to_port     = 80
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  tags = {
-    Name = "ELK-SecurityGroup"
+echo "Creating default logstash.conf"
+cat <<EOT > /root/logstash/logstash.conf
+input {
+  beats {
+    port => 5044
   }
 }
 
-# Create an EC2 instance for the ELK stack
-resource "aws_instance" "elk_server" {
-  ami           = "ami-078264b8ba71bc45e"  # Use the latest Amazon Linux AMI or Ubuntu
-  instance_type = "t2.large"
-  key_name      = var.key_name
-  vpc_security_group_ids = [aws_security_group.ELK_sg.id]
+filter {
+  # Add filters here
+}
 
-  user_data = <<-EOF
-    #!/bin/bash
-    # Update and install dependencies
-    sudo yum update -y >> /var/log/user_data.log 2>&1
-    sudo yum install libxcrypt-compat -y  >> /var/log/user_data.log 2>&1
-    sudo yum install docker -y >> /var/log/user_data.log 2>&1
-    sudo service docker start >> /var/log/user_data.log 2>&1
-    mkdir -p /root/logstash
+output {
+  elasticsearch {
+    hosts => ["http://elasticsearch:9200"]
+    index => "logstash-%{+YYYY.MM.dd}"
+  }
+}
+EOT
 
-    echo "Creating default logstash.conf"
-    cat <<EOT > /root/logstash/logstash.conf
-    input {
-      beats {
-        port => 5044
-      }
-    }
+sudo usermod -aG docker ec2-user
+sudo curl -L "https://github.com/docker/compose/releases/download/1.29.2/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose >> /var/log/user_data.log 2>&1
+sudo chmod +x /usr/local/bin/docker-compose >> /var/log/user_data.log 2>&1
 
-    filter {
-      # Add filters here
-    }
-
-    output {
-      elasticsearch {
-        hosts => ["http://elasticsearch:9200"]
-        index => "logstash-%%{+YYYY.MM.dd}"
-      }
-    }
-    EOT
-
-    sudo usermod -aG docker ec2-user
-    sudo curl -L "https://github.com/docker/compose/releases/download/1.29.2/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose >> /var/log/user_data.log 2>&1
-    sudo chmod +x /usr/local/bin/docker-compose >> /var/log/user_data.log 2>&1
-
-    # Create docker-compose file for ELK
-    cat <<EOT > docker-compose.yml
+# Create docker-compose file for ELK
+cat <<EOT > docker-compose.yml
 version: '3'
 services:
   elasticsearch:
@@ -128,7 +69,7 @@ services:
     environment:
       - ELASTICSEARCH_HOSTS=https://elasticsearch:9200  # Use HTTPS for secure communication
       - ELASTICSEARCH_USERNAME=elastic                  # Use the elastic user for Kibana
-      - ELASTICSEARCH_PASSWORD=elastic123    # Provide the elastic user's password
+      - ELASTICSEARCH_PASSWORD=elastic123               # Provide the elastic user's password
       - SERVER_HOST=0.0.0.0                             # Set the server host
       - SERVER_NAME=kibana-node                         # Set the server hostname
     ports:
@@ -143,13 +84,7 @@ networks:
     ipam:
       config:
         - subnet: 172.18.0.0/16
-    EOT
+EOT
 
-    # Start ELK stack
-    sudo docker-compose up -d >> /var/log/user_data.log 2>&1
-  EOF
-
-  tags = {
-    Name = "ELK-Stack-Server"
-  }
-}
+# Start ELK stack
+sudo docker-compose up -d >> /var/log/user_data.log 2>&1
