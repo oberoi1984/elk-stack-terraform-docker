@@ -81,7 +81,7 @@ resource "aws_instance" "elk_server" {
               output {
                 elasticsearch {
                   hosts => ["http://elasticsearch:9200"]
-                  index => "logstash-%{+YYYY.MM.dd}"
+                  index => "logstash-%%{+YYYY.MM.dd}"
                 }
               }
               EOT
