@@ -95,7 +95,7 @@ resource "aws_instance" "elk_server" {
               version: '3'
               services:
                 elasticsearch:
-                  image: docker.elastic.co/elasticsearch/elasticsearch:8.10.0
+                  image: docker.elastic.co/elasticsearch/elasticsearch:8.15.2
                   environment:
                     - discovery.type=single-node
                     - xpack.security.enabled=false
@@ -103,14 +103,14 @@ resource "aws_instance" "elk_server" {
                     - "9200:9200"
 
                 logstash:
-                  image: docker.elastic.co/logstash/logstash:8.10.0
+                  image: docker.elastic.co/logstash/logstash:8.15.2
                   volumes:
                     - /root/logstash/logstash.conf:/usr/share/logstash/pipeline/logstash.conf
                   ports:
                     - "5044:5044"
 
                 kibana:
-                  image: docker.elastic.co/kibana/kibana:8.10.0
+                  image: docker.elastic.co/kibana/kibana:8.15.2
                   environment:
                     - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
                   ports:
