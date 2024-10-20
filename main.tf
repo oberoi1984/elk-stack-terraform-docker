@@ -42,12 +42,12 @@ resource "aws_instance" "elk_server" {
   user_data = <<-EOF
               #!/bin/bash
               # Update and install dependencies
-              sudo yum update -y
-              sudo yum install docker -y
-              sudo service docker start
+              sudo yum update -y >> /var/log/user_data.log 2>&1
+              sudo yum install docker -y >> /var/log/user_data.log 2>&1
+              sudo service docker start >> /var/log/user_data.log 2>&1
               sudo usermod -aG docker ec2-user
-              sudo curl -L "https://github.com/docker/compose/releases/download/1.29.2/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
-              sudo chmod +x /usr/local/bin/docker-compose
+              sudo curl -L "https://github.com/docker/compose/releases/download/1.29.2/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose >> /var/log/user_data.log 2>&1
+              sudo chmod +x /usr/local/bin/docker-compose >> /var/log/user_data.log 2>&1
 
               # Create docker-compose file for ELK
               cat <<EOT >> docker-compose.yml
@@ -77,7 +77,7 @@ resource "aws_instance" "elk_server" {
               EOT
 
               # Start ELK stack
-              sudo docker-compose up -d
+              sudo docker-compose up -d >> /var/log/user_data.log 2>&1
               EOF
 
   tags = {
