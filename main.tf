@@ -6,6 +6,30 @@ resource "aws_instance" "elk_server" {
   ami           = "ami-078264b8ba71bc45e"  # Use the latest Amazon Linux AMI or Ubuntu
   instance_type = "t2.micro"
   key_name      = var.key_name
+# Create a security group to allow SSH and HTTP access
+resource "aws_security_group" "nginx_sg" {
+  name_prefix = "nginx-sg-"
+
+  ingress {
+    from_port   = 22
+    to_port     = 22
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  ingress {
+    from_port   = 80
+    to_port     = 80
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
   
   user_data = <<-EOF
               #!/bin/bash
