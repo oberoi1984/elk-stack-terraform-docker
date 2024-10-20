@@ -12,7 +12,24 @@ resource "aws_security_group" "ELK_sg" {
     protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
   }
-
+  ingress {
+    from_port   = 5601
+    to_port     = 5601
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+  ingress {
+    from_port   = 9200
+    to_port     = 9200
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+  ingress {
+    from_port   = 5044
+    to_port     = 5044
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
   ingress {
     from_port   = 80
     to_port     = 80
@@ -43,8 +60,29 @@ resource "aws_instance" "elk_server" {
               #!/bin/bash
               # Update and install dependencies
               sudo yum update -y >> /var/log/user_data.log 2>&1
+              sudo yum install libxcrypt-compat -y  >> /var/log/user_data.log 2>&1
               sudo yum install docker -y >> /var/log/user_data.log 2>&1
               sudo service docker start >> /var/log/user_data.log 2>&1
+              mkdir -p /root/logstash
+              touch /root/logstash/logstash.conf
+              cat <<EOT >> /root/logstash/logstash.conf
+              input {
+                beats {
+                  port => 5044
+                }
+              }
+
+              filter {
+                # Add filters here
+              }
+
+              output {
+                elasticsearch {
+                  hosts => ["http://elasticsearch:9200"]
+                  index => "logstash-%{+YYYY.MM.dd}"
+                }
+              }
+              EOT
               sudo usermod -aG docker ec2-user
               sudo curl -L "https://github.com/docker/compose/releases/download/1.29.2/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose >> /var/log/user_data.log 2>&1
               sudo chmod +x /usr/local/bin/docker-compose >> /var/log/user_data.log 2>&1
@@ -64,7 +102,7 @@ resource "aws_instance" "elk_server" {
                 logstash:
                   image: docker.elastic.co/logstash/logstash:8.10.0
                   volumes:
-                    - ./logstash/logstash.conf:/usr/share/logstash/pipeline/logstash.conf
+                    - /root/logstash/logstash.conf:/usr/share/logstash/pipeline/logstash.conf
                   ports:
                     - "5044:5044"
 
