@@ -24,7 +24,11 @@ resource "aws_security_group" "ELK_sg" {
     to_port     = 0
     protocol    = "-1"
     cidr_blocks = ["0.0.0.0/0"]
+  tags = {
+    Name = "ELK-SecurityGroup"
   }
+}
+  
 resource "aws_instance" "elk_server" {
   ami           = "ami-078264b8ba71bc45e"  # Use the latest Amazon Linux AMI or Ubuntu
   instance_type = "t2.micro"
