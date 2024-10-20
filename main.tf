@@ -67,7 +67,7 @@ resource "aws_instance" "elk_server" {
               touch /root/logstash/logstash.conf
               if [ ! -f /root/logstash/logstash.conf ]; then
                  echo "Creating default logstash.conf"
-                 cat <<EOT >> /root/logstash/logstash.conf
+                 cat << 'EOT' > /root/logstash/logstash.conf
               input {
                 beats {
                   port => 5044
@@ -91,7 +91,7 @@ resource "aws_instance" "elk_server" {
               sudo chmod +x /usr/local/bin/docker-compose >> /var/log/user_data.log 2>&1
 
               # Create docker-compose file for ELK
-              cat <<EOT >> docker-compose.yml
+              cat << 'EOT' > docker-compose.yml
               version: '3'
               services:
                 elasticsearch:
