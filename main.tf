@@ -67,10 +67,6 @@ resource "aws_instance" "elk_server" {
               # Wait for Logstash container to be up
               sleep 60
 
-              # Retrieve the Logstash container IP address
-
-              logstash_ip=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' default_logstash_1)
-
               # Create the Filebeat configuration file
 
               sudo rpm --import https://artifacts.elastic.co/GPG-KEY-elasticsearch >> /var/log/user_data.log 2>&1
@@ -87,7 +83,12 @@ resource "aws_instance" "elk_server" {
               sudo yum install filebeat -y >> /var/log/user_data.log 2>&1
               sudo systemctl enable filebeat >> /var/log/user_data.log 2>&1
               sudo systemctl start filebeat >> /var/log/user_data.log 2>&1
-              cat <<HEREDOC > /etc/filebeat/filebeat.yml
+
+              # Retrieve the Logstash container IP address
+
+              logstash_ip=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' default_logstash_1)
+
+              cat <<EOT > /etc/filebeat/filebeat.yml
               filebeat.inputs:
               - type: log
                 enabled: true
@@ -98,7 +99,7 @@ resource "aws_instance" "elk_server" {
 
               output.logstash:
                 hosts: ["$logstash_ip:5044"]  # Replace with your Logstash server IP and port
-              HEREDOC
+              EOT
 
               sudo systemctl restart filebeat >> /var/log/user_data.log 2>&1
               sudo filebeat test config >> /var/log/user_data.log 2>&1
