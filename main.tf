@@ -88,7 +88,7 @@ resource "aws_instance" "elk_server" {
               sudo systemctl enable filebeat >> /var/log/user_data.log 2>&1
               sudo systemctl start filebeat >> /var/log/user_data.log 2>&1
               cat /dev/null > /etc/filebeat/filebeat.yml
-              cat <<EOT > /etc/filebeat/filebeat.yml
+              cat <<EOF > /etc/filebeat/filebeat.yml
               filebeat.inputs:
               - type: log
                 enabled: true
@@ -99,7 +99,7 @@ resource "aws_instance" "elk_server" {
 
               output.logstash:
                 hosts: ["$logstash_ip:5044"]  # Replace with your Logstash server IP and port
-              EOT
+              EOF
 
               sudo systemctl restart filebeat >> /var/log/user_data.log 2>&1
               sudo filebeat test config >> /var/log/user_data.log 2>&1
