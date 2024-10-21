@@ -87,7 +87,7 @@ resource "aws_instance" "elk_server" {
               sudo yum install filebeat -y >> /var/log/user_data.log 2>&1
               sudo systemctl enable filebeat >> /var/log/user_data.log 2>&1
               sudo systemctl start filebeat >> /var/log/user_data.log 2>&1
-              cat <<EOF > /etc/filebeat/filebeat.yml
+              cat <<HEREDOC > /etc/filebeat/filebeat.yml
               filebeat.inputs:
               - type: log
                 enabled: true
@@ -98,7 +98,7 @@ resource "aws_instance" "elk_server" {
 
               output.logstash:
                 hosts: ["$logstash_ip:5044"]  # Replace with your Logstash server IP and port
-              EOF
+              HEREDOC
 
               sudo systemctl restart filebeat >> /var/log/user_data.log 2>&1
               sudo filebeat test config >> /var/log/user_data.log 2>&1
