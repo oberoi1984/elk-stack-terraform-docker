@@ -132,7 +132,7 @@ resource "aws_instance" "elk_server" {
                 kibana:
                   image: docker.elastic.co/kibana/kibana:8.15.2
                   environment:
-                    - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+                    - ELASTICSEARCH_HOSTS=http://localhost:9200
                   ports:
                     - "5601:5601"
                   networks:
