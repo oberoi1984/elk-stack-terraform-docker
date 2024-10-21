@@ -63,6 +63,16 @@ resource "aws_instance" "elk_server" {
               sudo yum install libxcrypt-compat -y >> /var/log/user_data.log 2>&1
               sudo yum install docker -y >> /var/log/user_data.log 2>&1
               sudo service docker start >> /var/log/user_data.log 2>&1
+
+              # Wait for Logstash container to be up
+              sleep 60
+
+              # Retrieve the Logstash container IP address
+
+              logstash_ip=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' default_logstash_1)
+
+              # Create the Filebeat configuration file
+
               sudo rpm --import https://artifacts.elastic.co/GPG-KEY-elasticsearch >> /var/log/user_data.log 2>&1
               sudo tee /etc/yum.repos.d/elastic.repo <<EOT
               [elastic-7.x]
@@ -77,6 +87,23 @@ resource "aws_instance" "elk_server" {
               sudo yum install filebeat -y >> /var/log/user_data.log 2>&1
               sudo systemctl enable filebeat >> /var/log/user_data.log 2>&1
               sudo systemctl start filebeat >> /var/log/user_data.log 2>&1
+              cat /dev/null > /etc/filebeat/filebeat.yml
+              cat <<EOT > /etc/filebeat/filebeat.yml
+              filebeat.inputs:
+              - type: log
+                enabled: true
+                paths:
+                  - /var/log/*.log   # Collect logs from /var/log directory
+                fields:
+                  log_type: system_logs   # Add a custom field to identify logs
+
+              output.logstash:
+                hosts: ["$logstash_ip:5044"]  # Replace with your Logstash server IP and port
+
+              sudo systemctl restart filebeat >> /var/log/user_data.log 2>&1
+              sudo filebeat test config >> /var/log/user_data.log 2>&1
+
+
 
               mkdir -p /root/logstash
               
