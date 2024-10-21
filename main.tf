@@ -99,6 +99,7 @@ resource "aws_instance" "elk_server" {
 
               output.logstash:
                 hosts: ["$logstash_ip:5044"]  # Replace with your Logstash server IP and port
+              EOT
 
               sudo systemctl restart filebeat >> /var/log/user_data.log 2>&1
               sudo filebeat test config >> /var/log/user_data.log 2>&1
