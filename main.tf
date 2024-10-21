@@ -64,9 +64,6 @@ resource "aws_instance" "elk_server" {
               sudo yum install docker -y >> /var/log/user_data.log 2>&1
               sudo service docker start >> /var/log/user_data.log 2>&1
 
-              # Wait for Logstash container to be up
-              sleep 60
-
               # Create the Filebeat configuration file
 
               sudo rpm --import https://artifacts.elastic.co/GPG-KEY-elasticsearch >> /var/log/user_data.log 2>&1
@@ -83,27 +80,6 @@ resource "aws_instance" "elk_server" {
               sudo yum install filebeat -y >> /var/log/user_data.log 2>&1
               sudo systemctl enable filebeat >> /var/log/user_data.log 2>&1
               sudo systemctl start filebeat >> /var/log/user_data.log 2>&1
-
-              # Retrieve the Logstash container IP address
-
-              logstash_ip=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' default_logstash_1)
-
-              cat <<EOT > /etc/filebeat/filebeat.yml
-              filebeat.inputs:
-              - type: log
-                enabled: true
-                paths:
-                  - /var/log/*.log   # Collect logs from /var/log directory
-                fields:
-                  log_type: system_logs   # Add a custom field to identify logs
-
-              output.logstash:
-                hosts: ["$logstash_ip:5044"]  # Replace with your Logstash server IP and port
-              EOT
-
-              sudo systemctl restart filebeat >> /var/log/user_data.log 2>&1
-              sudo filebeat test config >> /var/log/user_data.log 2>&1
-
 
 
               mkdir -p /root/logstash
@@ -173,4 +149,26 @@ resource "aws_instance" "elk_server" {
   tags = {
     Name = "ELK-Stack-Server"
   }
+              # Wait for Logstash container to be up
+              sleep 60   
+
+              # Retrieve the Logstash container IP address
+
+              logstash_ip=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' default_logstash_1)
+
+              cat <<EOT > /etc/filebeat/filebeat.yml
+              filebeat.inputs:
+              - type: log
+                enabled: true
+                paths:
+                  - /var/log/*.log   # Collect logs from /var/log directory
+                fields:
+                  log_type: system_logs   # Add a custom field to identify logs
+
+              output.logstash:
+                hosts: ["$logstash_ip:5044"]  # Replace with your Logstash server IP and port
+              EOT
+
+              sudo systemctl restart filebeat >> /var/log/user_data.log 2>&1
+              sudo filebeat test config >> /var/log/user_data.log 2>&1
 }
