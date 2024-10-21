@@ -144,7 +144,7 @@ resource "aws_instance" "elk_server" {
 
               # Start ELK stack
               sudo docker-compose up -d >> /var/log/user_data.log 2>&1
-              EOF
+              
 
   tags = {
     Name = "ELK-Stack-Server"
@@ -171,4 +171,5 @@ resource "aws_instance" "elk_server" {
 
               sudo systemctl restart filebeat >> /var/log/user_data.log 2>&1
               sudo filebeat test config >> /var/log/user_data.log 2>&1
+              EOF
 }
