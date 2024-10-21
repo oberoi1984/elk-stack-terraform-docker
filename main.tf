@@ -87,7 +87,6 @@ resource "aws_instance" "elk_server" {
               sudo yum install filebeat -y >> /var/log/user_data.log 2>&1
               sudo systemctl enable filebeat >> /var/log/user_data.log 2>&1
               sudo systemctl start filebeat >> /var/log/user_data.log 2>&1
-              cat /dev/null > /etc/filebeat/filebeat.yml
               cat <<EOF > /etc/filebeat/filebeat.yml
               filebeat.inputs:
               - type: log
