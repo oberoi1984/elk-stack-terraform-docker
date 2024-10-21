@@ -63,6 +63,21 @@ resource "aws_instance" "elk_server" {
               sudo yum install libxcrypt-compat -y >> /var/log/user_data.log 2>&1
               sudo yum install docker -y >> /var/log/user_data.log 2>&1
               sudo service docker start >> /var/log/user_data.log 2>&1
+              sudo rpm --import https://artifacts.elastic.co/GPG-KEY-elasticsearch >> /var/log/user_data.log 2>&1
+              sudo tee /etc/yum.repos.d/elastic.repo <<EOT
+              [elastic-7.x]
+              name=Elastic repository for 7.x packages
+              baseurl=https://artifacts.elastic.co/packages/7.x/yum
+              gpgcheck=1
+              gpgkey=https://artifacts.elastic.co/GPG-KEY-elasticsearch
+              enabled=1
+              autorefresh=1
+              type=rpm-md
+              EOT
+              sudo yum install filebeat -y >> /var/log/user_data.log 2>&1
+              sudo systemctl enable filebeat >> /var/log/user_data.log 2>&1
+              sudo systemctl start filebeat >> /var/log/user_data.log 2>&1
+
               mkdir -p /root/logstash
               
               # Write the logstash configuration
